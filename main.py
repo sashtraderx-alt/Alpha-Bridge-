@@ -1,3 +1,24 @@
+import os
+import telebot
+import google.generativeai as genai
+from flask import Flask
+
+# إعداد السيرفر الصغير لـ Render
+app = Flask(__name__)
+
+# إعداد الذكاء الاصطناعي
+genai.configure(api_key=os.environ.get('GEMINI_API_KEY'))
+model = genai.GenerativeModel('gemini-pro')
+
+# إعداد البوت
+bot = telebot.TeleBot(os.environ.get('TELEGRAM_BOT_TOKEN'))
+
+@app.route('/')
+def hello():
+    return "ALPHA BOT IS LIVE"
+
+# هنا تضع كود الـ handle_messages اللي أعطيتك اياه سابقاً
+
 @bot.message_handler(func=lambda message: True)
 def handle_messages(message):
     try:
