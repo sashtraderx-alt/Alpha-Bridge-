@@ -72,6 +72,28 @@ def telegram_webhook():
     if not update:
         return jsonify({"status": "no data"}), 200
 
+    # إذا كان التنبيه من TradingView (يحتوي على symbol)
+    if 'symbol' in update:
+        # نستخدم المعرف الأساسي المخزن في إعدادات Render
+        chat_id = MAIN_CHAT_ID 
+        message_text = f"إشارة جديدة: {update['symbol']} - {update['type']}"
+        send_telegram_message(chat_id, message_text)
+        
+    # إذا كانت رسالة دردشة من تيليجرام
+    elif 'message' in update:
+        chat_id = update['message']['chat']['id']
+        text = update['message'].get('text', '')
+        # هنا البوت يرد على نفس الشخص أو المجموعة التي أرسلت له
+        send_telegram_message(chat_id, "وصلت رسالتك يا طيب، ألفا عم يحلل..")
+
+    return jsonify({"status": "success"}), 200
+
+@app.route('/webhook', methods=['POST'])
+def telegram_webhook():
+    update = request.json
+    if not update:
+        return jsonify({"status": "no data"}), 200
+
     # 1. Handle TradingView Signals (JSON)
     if 'symbol' in update:
         try:
