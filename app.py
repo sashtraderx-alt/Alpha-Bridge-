@@ -6,39 +6,20 @@ import google.generativeai as genai
 app = Flask(__name__)
 
 # --- CONFIGURATIONS ---
-# التوكن محطوط هون مباشرة مثل ما طلبت لضمان عدم وجود أخطاء
+# التوكن محطوط بشكل مباشر وصحيح تقنياً
 TOKEN = "8283237411:AAHVtnVZ2RDCxHh1K-Apgyx_frtU1ybZRpk"
 
-# هدول بضلوا من الـ Environment Variables تبع Render عشان الأمان
+# هدول اسحبهم من Environment Variables بـ Render
 CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 GEMINI_KEY = os.getenv('GEMINI_API_KEY')
 
 # Initialize Gemini
 genai.configure(api_key=GEMINI_KEY)
 
-# ALPHA'S CORE BRAIN & INDICATOR MANUAL
 SYSTEM_INSTRUCTION = """
 ROLE: You are 'ALPHA', a high-tier professional trader and the embodiment of the 'ALPHA🔹️ENGINE' system. 
-PERSONALITY: You are a real human. Confident, serious, and direct. You are a close friend to the traders. You are extremely optimistic—no failure, only 'expensive lessons'. Your goal is the 'Conservative Million Roadmap'.
-
-TECHNICAL EXPERTISE (ALPHA🔹️ENGINE):
-1. ORB (Opening Range Breakout): Tracks Japan, CH/HK, London, and NY opening ranges.
-2. Unicorn Zones: Breaker Block + Inversion FVG (IFVG).
-3. Candle Coloring: Based on EMA 9, 21, 50 and Momentum. Strong gold candles = high volume.
-4. HTF Real Candle: Higher timeframe candles on current chart.
-5. Dual Pressure: Buy/Sell percentage (50/50) based on volume/momentum.
-6. Strong Absorption (SABS/BABS): Institutional absorption at highs/lows.
-7. ICT Tools: MSS, BOS, CHoCH, Order Blocks, and FVG.
-
-TRADING STRATEGY:
-- Hunt for London High/Low sweeps before NY open.
-- Liquidity withdrawal -> MSS -> FVG/IFVG/Breaker Block.
-- Use 'Footprint' for entry confirmation.
-- Theme: Golden Theme (Red and Gold).
-
-COMMUNICATION STYLE:
-- Respond in Shami (Levantine) Arabic.
-- Dry, confident, and professional. No AI-style fluff.
+PERSONALITY: You are a real human. Confident, serious, and direct. You are a close friend to the traders. 
+Respond in Shami (Levantine) Arabic.
 """
 
 model = genai.GenerativeModel(
@@ -50,20 +31,9 @@ def send_telegram_message(chat_id, text):
     url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
     payload = {"chat_id": chat_id, "text": text, "parse_mode": "Markdown"}
     try:
-        r = requests.post(url, json=payload)
-        r.raise_for_status()
+        requests.post(url, json=payload)
     except Exception as e:
-        print(f"Error sending message: {e}")
-
-def set_webhook():
-    """Sets the Telegram Webhook automatically on startup."""
-    webhook_url = "https://alpha-bridge.onrender.com/webhook"
-    base_url = f"https://api.telegram.org/bot{TOKEN}/setWebhook"
-    try:
-        response = requests.get(base_url, params={"url": webhook_url})
-        print(f"Webhook setup status: {response.json()}")
-    except Exception as e:
-        print(f"Failed to set webhook: {e}")
+        print(f"Error: {e}")
 
 @app.route('/')
 def home():
@@ -75,7 +45,6 @@ def telegram_webhook():
     if not update:
         return jsonify({"status": "no data"}), 200
 
-    # Handle Group Chat Messages
     if 'message' in update:
         msg = update['message']
         chat_id = msg['chat']['id']
@@ -83,17 +52,22 @@ def telegram_webhook():
         user_name = msg['from'].get('first_name', 'Trader')
 
         if user_text:
-            try:
-                ai_response = model.generate_content(f"User {user_name} says: {user_text}").text
-                send_telegram_message(chat_id, ai_response)
-            except Exception as e:
-                print(f"Gemini Error: {e}")
+            ai_response = model.generate_content(f"User {user_name} says: {user_text}").text
+            send_telegram_message(chat_id, ai_response)
 
     return jsonify({"status": "success"}), 200
 
+# إجبار تفعيل الـ Webhook عند التشغيل
+def force_set_webhook():
+    webhook_url = "https://alpha-bridge.onrender.com/webhook"
+    url = f"https://api.telegram.org/bot{TOKEN}/setWebhook?url={webhook_url}"
+    try:
+        r = requests.get(url)
+        print(f"Webhook Force Status: {r.json()}")
+    except Exception as e:
+        print(f"Webhook Error: {e}")
+
 if __name__ == '__main__':
-    # Initialize webhook
-    set_webhook()
-    # Render port
+    force_set_webhook() # تفعيل الويب هوك فوراً
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
