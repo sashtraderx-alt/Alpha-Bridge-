@@ -4,6 +4,15 @@ from flask import Flask, request, jsonify
 import google.generativeai as genai
 
 app = Flask(__name__)
+# كود لربط الويب هوك تلقائياً عند التشغيل
+def set_webhook():
+    webhook_url = f"https://api.telegram.org/bot{TOKEN}/setWebhook?url=https://alpha-bridge.onrender.com/webhook"
+    requests.get(webhook_url)
+
+# استدعاء الدالة عند بدء السيرفر
+with app.app_context():
+    set_webhook()
+
 
 # الإعدادات
 TOKEN = os.getenv('TELEGRAM_TOKEN')
