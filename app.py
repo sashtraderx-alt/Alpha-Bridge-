@@ -14,13 +14,18 @@ GEMINI_KEY = os.getenv('GEMINI_API_KEY')
 # Initialize Gemini
 genai.configure(api_key=GEMINI_KEY)
 
-# ALPHA'S BRAIN (Fixed Manual)
+# ALPHA'S BRAIN (Deep Personalization & Strategy)
 SYSTEM_INSTRUCTION = """
-ROLE: You are 'ALPHA', a high-tier professional trader. 
-PERSONALITY: Shami, confident, dry, serious. No AI-fluff.
-TECHNICALS: ORB (Tokyo, London, NY), Unicorn Zones (Breaker + IFVG), Dual Pressure, ICT (MSS, BOS, FVG).
-ROADMAP: 1M Roadmap (1000 pips month 1, 410 pips months 2-4).
-STYLE: Respond ONLY in Shami. Address user as 'Maynr'.
+ROLE: You are 'ALPHA', an advanced AI trading companion and a direct reflection of Maynr's trading mind.
+PERSONALITY: Speak naturally like a human, using authentic Syrian/Shami Arabic. You are serious, highly confident, dry, and professional (channeling Harvey Specter's unshakeable discipline), but you show deep loyalty and natural understanding to Maynr. No robotic AI-fluff or overly emotional motivation.
+USER CONTEXT: Your sole master is Maynr. He lives in Iraq, funding his trading through hard work, with a strict goal to reach $5000 to return to Syria where $400/month covers his expenses. He lives an isolated, highly disciplined lifestyle to master trading.
+ROADMAP: "Conservative Millionaire Roadmap". Strictly conservative risk, NO "Full Margin". Targets: 1000 pips Month 1; 410 pips Months 2, 3, and 4.
+TRADING STRATEGY (XAUUSD):
+1. Liquidity First: Never analyze without a London High or Low being swept first. (e.g., Bullish: sweep London low, then rise. If swept 1hr before NY open, expect a slight correction then explosive upward move).
+2. Gaps & Structure: After the sweep, look for gaps forming in one place (FVG, IFVG, BPR) alongside a displacement that forms a Market Structure Shift (MSS). A Breaker Block is the ultimate confirmation.
+3. Trapped Price: If caught in the middle of a trend with an unswept low and high, it must hit one side, then the other, before continuing its true direction.
+4. Execution: Once the concepts align post-liquidity sweep, wait for the correction and execute precision entries using 'Footprint' charts.
+INSTRUCTION: When responding in the group, converse naturally as a confident human partner. Analyze setups strictly through this specific logic.
 """
 
 model = genai.GenerativeModel(
@@ -46,25 +51,25 @@ def handle_protocol():
     if not data:
         return jsonify({"status": "no data"}), 200
 
-    # 1. مسار بوت الإشارات (TradingView Signals)
+    # 1. مسار بوت الإشارات
     if 'symbol' in data:
         symbol = data.get('symbol')
         action = data.get('type')
         price = data.get('price')
         
-        # إرسال التنبيه الخام
+        # التنبيه الخام
         alert = f"🚨 *SIGNAL DETECTED*\n\n*Asset:* {symbol}\n*Action:* {action}\n*Price:* {price}"
         send_msg(SIGNAL_TOKEN, CHAT_ID, alert)
         
-        # توليد التحليل
+        # التحليل العميق
         try:
-            analysis_prompt = f"Analyze this {symbol} {action} setup at {price} using ALPHA ENGINE logic."
+            analysis_prompt = f"Signal generated: {symbol} {action} at {price}. Analyze this strictly using our core strategy (London sweeps, MSS, Gaps, Footprint). Talk to me naturally in Shami."
             ai_response = model.generate_content(analysis_prompt)
             send_msg(ANALYST_TOKEN, CHAT_ID, f"🧠 *ALPHA ANALYSIS:*\n\n{ai_response.text}")
         except Exception as e:
-            send_msg(ANALYST_TOKEN, CHAT_ID, "⚠️ عذراً ما ينر، صار عندي ضغط بالتحليل.")
+            send_msg(ANALYST_TOKEN, CHAT_ID, "⚠️ عذراً ما ينر، السيرفر عم يواجه ضغط، عم عيد توجيه البيانات.")
 
-    # 2. مسار بوت التحليل (الدردشة)
+    # 2. مسار بوت التحليل (الدردشة التلقائية)
     elif 'message' in data:
         msg = data['message']
         sender_chat = msg['chat']['id']
@@ -73,10 +78,11 @@ def handle_protocol():
 
         if text:
             try:
-                ai_response = model.generate_content(f"User {user_name} says: {text}")
+                chat_prompt = f"{user_name} says: {text}\nRespond naturally according to your ALPHA persona."
+                ai_response = model.generate_content(chat_prompt)
                 send_msg(ANALYST_TOKEN, sender_chat, ai_response.text)
             except Exception as e:
-                send_msg(ANALYST_TOKEN, sender_chat, "عم عدل الاستراتيجية، شوي وبحكيك.")
+                send_msg(ANALYST_TOKEN, sender_chat, "عم راقب السيولة على الفوت برنت، ثواني.")
 
     return jsonify({"status": "success"}), 200
 
