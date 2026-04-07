@@ -55,8 +55,7 @@ def send_telegram_message(chat_id, text):
 def set_webhook():
     """Sets the Telegram Webhook automatically on startup."""
     webhook_url = "https://alpha-bridge.onrender.com/webhook"
-    base_url = f"https://api.telegram.org/bot{TOKEN = "8283237411:AAHVtnVZ2RDCxHh1K-Apgyx_frtU1ybZRpk"
-}/setWebhook"
+    base_url = f"https://api.telegram.org/bot{TOKEN = "8283237411:AAHVtnVZ2RDCxHh1K-Apgyx_frtU1ybZRpk"}/setWebhook"
     try:
         response = requests.get(base_url, params={"url": webhook_url})
         print(f"Webhook setup status: {response.json()}")
