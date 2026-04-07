@@ -6,10 +6,10 @@ import google.generativeai as genai
 app = Flask(__name__)
 
 # --- CONFIGURATIONS ---
-# التوكن محطوط بشكل مباشر وصحيح تقنياً
+# التوكن مدمج وجاهز للاستخدام
 TOKEN = "8283237411:AAHVtnVZ2RDCxHh1K-Apgyx_frtU1ybZRpk"
 
-# هدول اسحبهم من Environment Variables بـ Render
+# هدول بيعتمدوا على الإعدادات اللي حطيتها بـ Render
 CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 GEMINI_KEY = os.getenv('GEMINI_API_KEY')
 
@@ -17,9 +17,9 @@ GEMINI_KEY = os.getenv('GEMINI_API_KEY')
 genai.configure(api_key=GEMINI_KEY)
 
 SYSTEM_INSTRUCTION = """
-ROLE: You are 'ALPHA', a high-tier professional trader and the embodiment of the 'ALPHA🔹️ENGINE' system. 
+ROLE: You are 'ALPHA', a high-tier professional trader. 
 PERSONALITY: You are a real human. Confident, serious, and direct. You are a close friend to the traders. 
-Respond in Shami (Levantine) Arabic.
+STYLE: Respond in Shami (Levantine) Arabic. Be professional and optimistic about the 'Conservative Million Roadmap'.
 """
 
 model = genai.GenerativeModel(
@@ -52,22 +52,25 @@ def telegram_webhook():
         user_name = msg['from'].get('first_name', 'Trader')
 
         if user_text:
-            ai_response = model.generate_content(f"User {user_name} says: {user_text}").text
-            send_telegram_message(chat_id, ai_response)
+            try:
+                ai_response = model.generate_content(f"User {user_name} says: {user_text}").text
+                send_telegram_message(chat_id, ai_response)
+            except Exception as e:
+                print(f"Gemini Error: {e}")
 
     return jsonify({"status": "success"}), 200
 
-# إجبار تفعيل الـ Webhook عند التشغيل
-def force_set_webhook():
+# دالة لتثبيت الويب هوك بشكل إجباري عند تشغيل الملف
+def setup_webhook():
     webhook_url = "https://alpha-bridge.onrender.com/webhook"
     url = f"https://api.telegram.org/bot{TOKEN}/setWebhook?url={webhook_url}"
     try:
         r = requests.get(url)
-        print(f"Webhook Force Status: {r.json()}")
+        print(f"Webhook Final Setup: {r.json()}")
     except Exception as e:
-        print(f"Webhook Error: {e}")
+        print(f"Setup Error: {e}")
 
 if __name__ == '__main__':
-    force_set_webhook() # تفعيل الويب هوك فوراً
+    setup_webhook() # تفعيل الربط فوراً
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
