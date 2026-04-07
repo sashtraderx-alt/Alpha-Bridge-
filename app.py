@@ -59,7 +59,7 @@ def send_telegram_message(chat_id, text):
 def set_webhook():
     """Forces the Telegram Webhook to point to the Render URL."""
     webhook_url = "https://alpha-bridge.onrender.com/webhook"
-    base_url = f"https://api.telegram.org/bot{TOKEN}/setWebhook"
+    base_url = f"https:https://api.telegram.org/bot8283237411:AAHVtnVZ2RDCxHh1K-Apgyx_frtU1ybZRpk/getWebhookInfo"
     try:
         response = requests.get(base_url, params={"url": webhook_url})
         print(f"Webhook setup status: {response.json()}")
