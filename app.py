@@ -9,7 +9,8 @@ app = Flask(__name__)
 TOKEN = "8283237411:AAHVtnVZ2RDCxHh1K-Apgyx_frtU1ybZRpk"
 CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 GEMINI_KEY = os.getenv('GEMINI_API_KEY')
-
+TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+MAIN_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 genai.configure(api_key=GEMINI_KEY)
 
 # ALPHA'S CORE BRAIN - THE COMPLETE MANUAL
