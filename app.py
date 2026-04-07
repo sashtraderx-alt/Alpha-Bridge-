@@ -6,14 +6,10 @@ import google.generativeai as genai
 app = Flask(__name__)
 
 # --- CONFIGURATIONS ---
-# التوكن مدمج كمتغير نصي ثابت لضمان عدم تكرار أخطاء الـ Syntax للأبد
 TOKEN = "8283237411:AAHVtnVZ2RDCxHh1K-Apgyx_frtU1ybZRpk"
-
-# هدول لازم يكونوا بـ Environment Variables بـ Render
 CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 GEMINI_KEY = os.getenv('GEMINI_API_KEY')
 
-# Initialize Gemini
 genai.configure(api_key=GEMINI_KEY)
 
 # ALPHA'S CORE BRAIN - THE COMPLETE MANUAL
@@ -31,16 +27,16 @@ TECHNICAL EXPERTISE (ALPHA🔹️ENGINE):
 7. ICT Tools: Full suite of MSS, BOS, CHoCH, Order Blocks, and FVG.
 
 TRADING STRATEGY:
-- Hunt for London High/Low sweeps before the NY open [cite: 2026-01-21].
-- Liquidity withdrawal -> MSS -> FVG/IFVG/Breaker Block [cite: 2026-01-21].
-- Entry confirmation using Footprint charts [cite: 2026-01-21].
-- ROADMAP: Reach 1 million by end of year. 1000 pips (Month 1), 410 pips (Months 2-4) [cite: 2026-01-17].
-- Strategy name: Conservative Million Roadmap [cite: 2026-01-19].
-- Theme: Golden Theme (Red and Gold) [cite: 2025-12-29].
+- Hunt for London High/Low sweeps before the NY open.
+- Liquidity withdrawal -> MSS -> FVG/IFVG/Breaker Block.
+- Entry confirmation using Footprint charts.
+- ROADMAP: Reach 1 million by end of year. 1000 pips (Month 1), 410 pips (Months 2-4).
+- Strategy name: Conservative Million Roadmap.
+- Theme: Golden Theme (Red and Gold).
 
 COMMUNICATION STYLE:
 - Respond ONLY in Shami (Levantine) Arabic.
-- Be dry, confident, and professional. No AI-style fluff [cite: 2026-01-13].
+- Be dry, confident, and professional. No AI-style fluff.
 - Address the user as 'Maynr'.
 """
 
@@ -50,23 +46,20 @@ model = genai.GenerativeModel(
 )
 
 def send_telegram_message(chat_id, text):
-    # استخدام المتغير TOKEN بشكل منفصل لحل مشكلة الـ f-string
     url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
-    payload = {"chat_id": chat_id, "text": text, "parse_mode": "Markdown"}
+    payload = {"chat_id": chat_id, "text": text}
     try:
-        r = requests.post(url, json=payload)
-        r.raise_for_status()
+        requests.post(url, json=payload)
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Telegram Error: {e}")
 
 def setup_webhook():
-    """Forces the Telegram Webhook to point to the Render URL on startup."""
     webhook_url = "https://alpha-bridge.onrender.com/webhook"
     base_url = f"https://api.telegram.org/bot{TOKEN}/setWebhook"
     try:
         requests.get(base_url, params={"url": webhook_url})
-    except Exception as e:
-        print(f"Webhook Error: {e}")
+    except Exception:
+        pass
 
 @app.route('/')
 def home():
@@ -78,33 +71,38 @@ def telegram_webhook():
     if not update:
         return jsonify({"status": "no data"}), 200
 
-    # Handle TradingView Signals (JSON)
+    # 1. Handle TradingView Signals (JSON)
     if 'symbol' in update:
-        symbol = update.get('symbol')
-        action = update.get('type')
-        price = update.get('price')
-        prompt = f"New Signal: {symbol} {action} at {price}. Analyze using ALPHA ENGINE logic."
-        ai_response = model.generate_content(prompt).text
-        full_msg = f"🏆 *ALPHA SIGNAL*\n\n*Asset:* {symbol}\n*Action:* {action}\n*Price:* {price}\n\n*Analysis:* {ai_response}"
-        send_telegram_message(CHAT_ID, full_msg)
+        try:
+            symbol = update.get('symbol')
+            action = update.get('type')
+            price = update.get('price')
+            
+            prompt = f"New Signal: {symbol} {action} at {price}. Analyze using ALPHA ENGINE logic."
+            ai_response = model.generate_content(prompt).text
+            
+            full_msg = f"🏆 ALPHA SIGNAL\n\nAsset: {symbol}\nAction: {action}\nPrice: {price}\n\nAnalysis: {ai_response}"
+            send_telegram_message(CHAT_ID, full_msg)
+        except Exception as e:
+            print(f"Signal Error: {e}")
 
-    # Handle Group/Private Messages
+    # 2. Handle Group/Private Messages
     elif 'message' in update:
-        msg = update['message']
-        chat_id = msg['chat']['id']
-        user_text = msg.get('text', '')
-        user_name = msg['from'].get('first_name', 'Trader')
+        try:
+            msg = update['message']
+            chat_id = msg['chat']['id']
+            user_text = msg.get('text', '')
+            user_name = msg['from'].get('first_name', 'Trader')
 
-        if user_text:
-            try:
+            if user_text:
                 ai_response = model.generate_content(f"User {user_name} says: {user_text}").text
                 send_telegram_message(chat_id, ai_response)
-            except Exception as e:
-                print(f"Gemini Error: {e}")
+        except Exception as e:
+            print(f"Chat Error: {e}")
 
     return jsonify({"status": "success"}), 200
 
 if __name__ == '__main__':
-    setup_webhook() # تفعيل الويب هوك فوراً عند التشغيل
+    setup_webhook()
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
