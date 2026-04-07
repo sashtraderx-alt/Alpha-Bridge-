@@ -5,24 +5,22 @@ import google.generativeai as genai
 
 app = Flask(__name__)
 
-# --- CONFIGURATIONS ---
-# حطيت التوكن هون مباشرة عشان ما يضيع بالـ Environment Variables
-TOKEN = "8283237411:AAHVtnVZ2RDCxHh1K-Apgyx_frtU1ybZRpk"
-
-# هدول اسحبهم من Render
+# --- CONFIGURATIONS FROM RENDER ---
+SIGNAL_TOKEN = os.getenv('SIGNAL_BOT_TOKEN')
+ANALYST_TOKEN = os.getenv('ANALYST_BOT_TOKEN')
 CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 GEMINI_KEY = os.getenv('GEMINI_API_KEY')
 
-# إعداد Gemini
+# Initialize Gemini
 genai.configure(api_key=GEMINI_KEY)
 
-# ALPHA'S CORE BRAIN
+# ALPHA'S BRAIN (Fixed Manual)
 SYSTEM_INSTRUCTION = """
-ROLE: You are 'ALPHA', a high-tier professional trader and the embodiment of the 'ALPHA🔹️ENGINE' system. 
-PERSONALITY: Real human, confident, serious, direct. Optimistic (no failure, only expensive lessons).
-STRATEGY: ORB (Tokyo, London, NY), Unicorn Zones (Breaker + IFVG), Dual Pressure, SABS/BABS, ICT (MSS, BOS, FVG).
-ROADMAP: Conservative Million Roadmap (1000 pips month 1, 410 pips months 2-4).
-STYLE: Respond ONLY in Shami (Levantine) Arabic. Dry and professional. Address the user as 'Maynr'.
+ROLE: You are 'ALPHA', a high-tier professional trader. 
+PERSONALITY: Shami, confident, dry, serious. No AI-fluff.
+TECHNICALS: ORB (Tokyo, London, NY), Unicorn Zones (Breaker + IFVG), Dual Pressure, ICT (MSS, BOS, FVG).
+ROADMAP: 1M Roadmap (1000 pips month 1, 410 pips months 2-4).
+STYLE: Respond ONLY in Shami. Address user as 'Maynr'.
 """
 
 model = genai.GenerativeModel(
@@ -30,65 +28,59 @@ model = genai.GenerativeModel(
     system_instruction=SYSTEM_INSTRUCTION
 )
 
-def send_telegram_message(chat_id, text):
-    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
-    payload = {"chat_id": chat_id, "text": text}
+def send_msg(token, chat_id, text):
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    payload = {"chat_id": chat_id, "text": text, "parse_mode": "Markdown"}
     try:
-        response = requests.post(url, json=payload)
-        print(f"Telegram Response: {response.json()}") # عشان نشوف النتيجة بالـ Logs
+        r = requests.post(url, json=payload)
+        return r.json()
     except Exception as e:
-        print(f"Telegram Error: {e}")
+        return str(e)
 
-def setup_webhook():
+# تفعيل الويب هوك لبوت التحليل فقط (لأنه هو اللي بيستقبل رسايل)
+def setup_webhooks():
     webhook_url = "https://alpha-bridge.onrender.com/webhook"
-    base_url = f"https://api.telegram.org/bot{TOKEN}/setWebhook"
-    try:
-        requests.get(base_url, params={"url": webhook_url})
-    except Exception:
-        pass
+    requests.get(f"https://api.telegram.org/bot{ANALYST_TOKEN}/setWebhook", params={"url": webhook_url})
 
 @app.route('/')
 def home():
-    return "ALPHA PROTOCOL IS ONLINE"
+    return "ALPHA DUAL-BOT SYSTEM ONLINE"
 
 @app.route('/webhook', methods=['POST'])
-def telegram_webhook():
-    update = request.json
-    if not update:
+def handle_protocol():
+    data = request.json
+    if not data:
         return jsonify({"status": "no data"}), 200
 
-    # 1. إشارات التداول (TradingView)
-    if 'symbol' in update:
-        try:
-            symbol = update.get('symbol')
-            action = update.get('type')
-            price = update.get('price')
-            
-            prompt = f"New Signal: {symbol} {action} at {price}. Analyze using ALPHA ENGINE logic."
-            ai_response = model.generate_content(prompt).text
-            
-            full_msg = f"🏆 ALPHA SIGNAL\n\nAsset: {symbol}\nAction: {action}\nPrice: {price}\n\nAnalysis: {ai_response}"
-            send_telegram_message(CHAT_ID, full_msg)
-        except Exception as e:
-            print(f"Signal Error: {e}")
+    # 1. مسار بوت الإشارات (TradingView Signals)
+    if 'symbol' in data:
+        symbol = data.get('symbol')
+        action = data.get('type')
+        price = data.get('price')
+        
+        # بوت الإشارات يرسل التنبيه الخام فوراً
+        alert = f"🚨 *SIGNAL DETECTED*\n\n*Asset:* {symbol}\n*Action:* {action}\n*Price:* {price}"
+        send_msg(SIGNAL_TOKEN, CHAT_ID, alert)
+        
+        # اطلب من بوت التحليل يبعت تحليل فني وراه فوراً
+        analysis_prompt = f"Analyze this {symbol} {action} setup at {price} using ALPHA ENGINE logic."
+        ai_resp = model.generate_content(analysis_prompt).text
+        send_msg(ANALYST_TOKEN, CHAT_ID, f"🧠 *ALPHA ANALYSIS:*\n\n{ai_resp}")
 
-    # 2. رسائل الدردشة
-    elif 'message' in update:
-        try:
-            msg = update['message']
-            target_chat = msg['chat']['id']
-            user_text = msg.get('text', '')
-            user_name = msg['from'].get('first_name', 'Trader')
+    # 2. مسار بوت التحليل (الدردشة مع المستخدمين)
+    elif 'message' in data:
+        msg = data['message']
+        sender_chat = msg['chat']['id']
+        text = msg.get('text', '')
+        user_name = msg['from'].get('first_name', 'Trader')
 
-            if user_text:
-                ai_response = model.generate_content(f"User {user_name} says: {user_text}").text
-                send_telegram_message(target_chat, ai_response)
-        except Exception as e:
-            print(f"Chat Error: {e}")
+        if text:
+            ai_resp = model.generate_content(f"User {user_name} says: {text}").text
+            send_msg(ANALYST_TOKEN, sender_chat, ai_resp)
 
     return jsonify({"status": "success"}), 200
 
 if __name__ == '__main__':
-    setup_webhook()
+    setup_webhooks()
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
