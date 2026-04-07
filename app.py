@@ -32,15 +32,9 @@ def send_msg(token, chat_id, text):
     url = f"https://api.telegram.org/bot{token}/sendMessage"
     payload = {"chat_id": chat_id, "text": text, "parse_mode": "Markdown"}
     try:
-        r = requests.post(url, json=payload)
-        return r.json()
+        requests.post(url, json=payload, timeout=10)
     except Exception as e:
-        return str(e)
-
-# تفعيل الويب هوك لبوت التحليل فقط (لأنه هو اللي بيستقبل رسايل)
-def setup_webhooks():
-    webhook_url = "https://alpha-bridge.onrender.com/webhook"
-    requests.get(f"https://api.telegram.org/bot{ANALYST_TOKEN}/setWebhook", params={"url": webhook_url})
+        print(f"Error sending message: {e}")
 
 @app.route('/')
 def home():
@@ -48,7 +42,7 @@ def home():
 
 @app.route('/webhook', methods=['POST'])
 def handle_protocol():
-    data = request.json
+    data = request.get_json()
     if not data:
         return jsonify({"status": "no data"}), 200
 
@@ -58,16 +52,19 @@ def handle_protocol():
         action = data.get('type')
         price = data.get('price')
         
-        # بوت الإشارات يرسل التنبيه الخام فوراً
+        # إرسال التنبيه الخام
         alert = f"🚨 *SIGNAL DETECTED*\n\n*Asset:* {symbol}\n*Action:* {action}\n*Price:* {price}"
         send_msg(SIGNAL_TOKEN, CHAT_ID, alert)
         
-        # اطلب من بوت التحليل يبعت تحليل فني وراه فوراً
-        analysis_prompt = f"Analyze this {symbol} {action} setup at {price} using ALPHA ENGINE logic."
-        ai_resp = model.generate_content(analysis_prompt).text
-        send_msg(ANALYST_TOKEN, CHAT_ID, f"🧠 *ALPHA ANALYSIS:*\n\n{ai_resp}")
+        # توليد التحليل
+        try:
+            analysis_prompt = f"Analyze this {symbol} {action} setup at {price} using ALPHA ENGINE logic."
+            ai_response = model.generate_content(analysis_prompt)
+            send_msg(ANALYST_TOKEN, CHAT_ID, f"🧠 *ALPHA ANALYSIS:*\n\n{ai_response.text}")
+        except Exception as e:
+            send_msg(ANALYST_TOKEN, CHAT_ID, "⚠️ عذراً ما ينر، صار عندي ضغط بالتحليل.")
 
-    # 2. مسار بوت التحليل (الدردشة مع المستخدمين)
+    # 2. مسار بوت التحليل (الدردشة)
     elif 'message' in data:
         msg = data['message']
         sender_chat = msg['chat']['id']
@@ -75,12 +72,14 @@ def handle_protocol():
         user_name = msg['from'].get('first_name', 'Trader')
 
         if text:
-            ai_resp = model.generate_content(f"User {user_name} says: {text}").text
-            send_msg(ANALYST_TOKEN, sender_chat, ai_resp)
+            try:
+                ai_response = model.generate_content(f"User {user_name} says: {text}")
+                send_msg(ANALYST_TOKEN, sender_chat, ai_response.text)
+            except Exception as e:
+                send_msg(ANALYST_TOKEN, sender_chat, "عم عدل الاستراتيجية، شوي وبحكيك.")
 
     return jsonify({"status": "success"}), 200
 
 if __name__ == '__main__':
-    setup_webhooks()
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
