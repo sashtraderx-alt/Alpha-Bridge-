@@ -6,7 +6,7 @@ import google.generativeai as genai
 app = Flask(__name__)
 # كود لربط الويب هوك تلقائياً عند التشغيل
 def set_webhook():
-    webhook_url = f"https://api.telegram.org/bot{TOKEN}/setWebhook?url=https://alpha-bridge.onrender.com/webhook"
+    webhook_url = f"https://api.telegram.org/bot{8283237411:AAHVtnVZ2RDCxHh1K-Apgyx_frtU1ybZRpk}/setWebhook?url=https://alpha-bridge.onrender.com/webhook"
     requests.get(webhook_url)
 
 # استدعاء الدالة عند بدء السيرفر
