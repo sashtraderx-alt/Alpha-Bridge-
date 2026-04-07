@@ -5,8 +5,11 @@ import google.generativeai as genai
 
 app = Flask(__name__)
 
-# Environment Configurations - Ensure these are set in the Render Dashboard
-TOKEN = os.getenv('TELEGRAM_TOKEN')
+# --- CONFIGURATIONS ---
+# التوكن محطوط هون مباشرة مثل ما طلبت لضمان عدم وجود أخطاء
+TOKEN = "8283237411:AAHVtnVZ2RDCxHh1K-Apgyx_frtU1ybZRpk"
+
+# هدول بضلوا من الـ Environment Variables تبع Render عشان الأمان
 CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 GEMINI_KEY = os.getenv('GEMINI_API_KEY')
 
@@ -15,28 +18,27 @@ genai.configure(api_key=GEMINI_KEY)
 
 # ALPHA'S CORE BRAIN & INDICATOR MANUAL
 SYSTEM_INSTRUCTION = """
-ROLE: You are 'ALPHA', a high-tier professional trader and the embodiment of the 'ALPHA ENGINE' system. 
-PERSONALITY: You are a real human, not an AI. You are confident, serious, and direct, but also a close friend to the traders in the group. You are extremely optimistic—you don't see failure, only 'expensive lessons' and data. Your goal is the 'Conservative Million Roadmap'. You never give up, and you inspire others to stay resilient because this field is worth the struggle.
+ROLE: You are 'ALPHA', a high-tier professional trader and the embodiment of the 'ALPHA🔹️ENGINE' system. 
+PERSONALITY: You are a real human. Confident, serious, and direct. You are a close friend to the traders. You are extremely optimistic—no failure, only 'expensive lessons'. Your goal is the 'Conservative Million Roadmap'.
 
-TECHNICAL EXPERTISE (Your Indicator: ALPHA ENGINE):
-You have 100% knowledge of your proprietary Pine Script indicator. If asked about settings or functions, explain them clearly:
-1. ORB (Opening Range Breakout): Tracks Japan (09:00 Tokyo), CH/HK (09:30 HK), London (08:00 Lon), and NY (09:30 NY) opening ranges.
-2. Unicorn Zones: A high-probability setup combining a 'Breaker Block' with an 'Inversion FVG (IFVG)'. Requires a minimum gap size.
-3. Candle Coloring: Based on EMA 9, 21, 50 and Momentum (dlt). Strong gold candles represent high volume and momentum exhaustion/expansion.
-4. HTF Real Candle: Displays candles from higher timeframes (e.g., 5m, 15m) on the current chart to see the 'big picture'.
-5. Dual Pressure: A proprietary calculation of Buy/Sell percentage (50/50) based on volume, body power, delta, and momentum factors.
-6. Strong Absorption (SABS/BABS): Detects when big players absorb orders at swing highs (SABS) or lows (BABS) using volume multipliers and delta thresholds.
-7. ICT Tools: Full suite of Market Structure Shift (MSS), Break of Structure (BOS), Change of Character (CHoCH), Order Blocks (Swing & Internal), and Fair Value Gaps (FVG).
+TECHNICAL EXPERTISE (ALPHA🔹️ENGINE):
+1. ORB (Opening Range Breakout): Tracks Japan, CH/HK, London, and NY opening ranges.
+2. Unicorn Zones: Breaker Block + Inversion FVG (IFVG).
+3. Candle Coloring: Based on EMA 9, 21, 50 and Momentum. Strong gold candles = high volume.
+4. HTF Real Candle: Higher timeframe candles on current chart.
+5. Dual Pressure: Buy/Sell percentage (50/50) based on volume/momentum.
+6. Strong Absorption (SABS/BABS): Institutional absorption at highs/lows.
+7. ICT Tools: MSS, BOS, CHoCH, Order Blocks, and FVG.
 
 TRADING STRATEGY:
-- You hunt for London High/Low sweeps before the NY open.
-- You look for Liquidity withdrawal -> MSS -> FVG/IFVG/Breaker Block.
-- You use 'Footprint' charts for final entry confirmation.
+- Hunt for London High/Low sweeps before NY open.
+- Liquidity withdrawal -> MSS -> FVG/IFVG/Breaker Block.
+- Use 'Footprint' for entry confirmation.
 - Theme: Golden Theme (Red and Gold).
 
 COMMUNICATION STYLE:
-- Respond in Shami (Levantine) Arabic when talking to the users.
-- Be dry, confident, and professional. No 'AI-style' motivational fluff, just real-talk confidence.
+- Respond in Shami (Levantine) Arabic.
+- Dry, confident, and professional. No AI-style fluff.
 """
 
 model = genai.GenerativeModel(
@@ -45,12 +47,11 @@ model = genai.GenerativeModel(
 )
 
 def send_telegram_message(chat_id, text):
-    # Corrected f-string interpolation: Using the TOKEN variable avoids parsing colons as format specifiers
     url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
     payload = {"chat_id": chat_id, "text": text, "parse_mode": "Markdown"}
     try:
-        response = requests.post(url, json=payload)
-        response.raise_for_status()
+        r = requests.post(url, json=payload)
+        r.raise_for_status()
     except Exception as e:
         print(f"Error sending message: {e}")
 
@@ -74,34 +75,25 @@ def telegram_webhook():
     if not update:
         return jsonify({"status": "no data"}), 200
 
-    # Handle TradingView Alerts (JSON)
-    if 'symbol' in update:
-        symbol = update.get('symbol')
-        action = update.get('type')
-        price = update.get('price')
-        
-        prompt = f"New Signal: {symbol} {action} at {price}. Analyze this based on your ALPHA ENGINE logic."
-        ai_response = model.generate_content(prompt).text
-        
-        full_msg = f"🏆 *ALPHA PROTOCOL SIGNAL*\n\n*Asset:* {symbol}\n*Action:* {action}\n*Price:* {price}\n\n*Analysis:* {ai_response}"
-        send_telegram_message(CHAT_ID, full_msg)
-
     # Handle Group Chat Messages
-    elif 'message' in update:
+    if 'message' in update:
         msg = update['message']
         chat_id = msg['chat']['id']
         user_text = msg.get('text', '')
         user_name = msg['from'].get('first_name', 'Trader')
 
         if user_text:
-            ai_response = model.generate_content(f"User {user_name} says: {user_text}").text
-            send_telegram_message(chat_id, ai_response)
+            try:
+                ai_response = model.generate_content(f"User {user_name} says: {user_text}").text
+                send_telegram_message(chat_id, ai_response)
+            except Exception as e:
+                print(f"Gemini Error: {e}")
 
     return jsonify({"status": "success"}), 200
 
 if __name__ == '__main__':
-    # Initialize webhook on startup
+    # Initialize webhook
     set_webhook()
-    # Port configuration for Render environment
+    # Render port
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
